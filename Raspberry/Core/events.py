@@ -1,3 +1,10 @@
+from typing import Optional
+from dataclasses import dataclass
+
 class Event:
-    """Clase base para todos los eventos."""
     pass
+
+@dataclass
+class StartEvent(Event):
+    pass
+    

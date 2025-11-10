@@ -1,0 +1,14 @@
+[Unit]
+Description=Main service for main.py execution
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/syntara/Syntara-Future-Engineers/Raspberry 
+ExecStart=/usr/bin/python3 /home/syntara/Syntara-Future-Engineers/Raspberry/main.py 
+
+Restart=always
+RestartSec=5s 
+
+[Install]
+WantedBy=multi-user.target
