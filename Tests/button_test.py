@@ -1,19 +1,28 @@
+import RPi.GPIO as GPIO
 import time
-from gpiozero import Button
+Buttonpin = 17 
 
-PIN_BOTON = 17
-boton = Button(PIN_BOTON)
+GPIO.setmode(GPIO.BCM)
 
-def imprimir_mensaje():
-    """Función que se llama cuando se presiona el botón."""
+GPIO.setup(Buttonpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+def imprimir_mensaje(channel):
     print("¡Hello World!")
-    
-boton.when_pressed = imprimir_mensaje
 
-print(f"Programa iniciado. Esperando la pulsación en el pin GPIO {PIN_BOTON}...")
+GPIO.add_event_detect(
+    Buttonpin, 
+    GPIO.FALLING, 
+    callback=imprimir_mensaje, 
+    bouncetime=200
+)
+
 
 try:
     while True:
-        time.sleep(0.1)
+        time.sleep(1)
+
+        
 except KeyboardInterrupt:
-    print("\nPrograma terminado por el usuario.")
+
+    GPIO.cleanup()
+    print("\nPrograma terminado y pines limpiados.")
