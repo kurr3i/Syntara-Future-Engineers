@@ -7,4 +7,7 @@ class Event:
 @dataclass
 class StartEvent(Event):
     pass
-    
+
+@dataclass
+class SerialDataReceivedEvent(Event):
+    data: str 

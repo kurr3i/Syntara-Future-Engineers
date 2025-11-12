@@ -1,6 +1,8 @@
 import serial
 import time
 from typing import Optional
+from .event_bus import event_publisher
+from .events import SerialDataReceivedEvent
 
 SERIAL_PORT = '/dev/ttyACM0'    
 BAUD_RATE = 115200        
@@ -30,6 +32,42 @@ def send_command(command: str) -> bool:
     else:
         print("No serial conection available")
         return False
+
+def read_serial_data() -> Optional[str]:
+    global ser
+    if ser and ser.is_open:
+        try:
+            data = ser.readline().decode('ascii', errors='ignore').strip()
+            if data:
+                return data
+            else:
+                return None
+        except Exception as e:
+            print("Error reading serial:", e)
+            return None
+    else:
+        print("No serial connection available")
+        return None
+    
+def serial_listen_loop(event_publisher, SerialDataReceivedEvent):
+
+    if not initialize_serial_connection():
+        return
+        
+    try:
+        while True:
+            data = read_serial_data()
+            
+            if data is not None:
+                event = SerialDataReceivedEvent(data=data)
+                event_publisher.publish(event)
+            time.sleep(0.01)
+            
+    except KeyboardInterrupt:
+        print("\nBucle de escucha serial detenido.")
+    finally:
+        close_serial_connection()
+
 
 def close_serial_connection():
     global ser
