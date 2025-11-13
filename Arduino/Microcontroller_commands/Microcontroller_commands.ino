@@ -1,8 +1,7 @@
 #include <RotaryEncoder.h>
 #include <Servo.h>
 
-#define TurnButton 7  // Turn on button pin
-
+const int BUTTON_PIN = 7;     
 const int IN2 = 2;
 const int IN1 = 3;
 
@@ -23,25 +22,31 @@ long LT = 0;
 int posicion_anterior = 0;
 int posicion_actual = 0;
 char command = '\0';
+const unsigned long DEBOUNCE_TIME = 150; // Tiempo de rebote en milisegundos
+unsigned long lastPressTime = 0;
+bool lastButtonState = LOW;
+
 
 void setup() {
   D.attach(4);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  pinMode(TurnButton, INPUT_PULLUP);
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Usa resistencia interna pull-up
   Serial.begin(115200);
+  delay(100); // tiempo de estabilización
 }
 
 void loop() {
-  static bool estadoAnterior = HIGH;
-  bool estadoActual = digitalRead(TurnButton);
+    bool buttonState = !digitalRead(BUTTON_PIN); 
+  // (botón a GND: presionado = HIGH lógico, por eso el !)
 
-  if (estadoAnterior == HIGH && estadoActual == LOW) {
-    Serial.write(FSIG);   
+  // Si el botón se presionó y pasó el tiempo de rebote
+  if (buttonState && (millis() - lastPressTime) > DEBOUNCE_TIME) {
+    Serial.write(FSIG);     // Enviar señal única 'q'
+    lastPressTime = millis();
   }
-
-  estadoAnterior = estadoActual;
-}
+    lastButtonState = buttonState;
+     }
 
 void serialEvent() {
   while (Serial.available()) {

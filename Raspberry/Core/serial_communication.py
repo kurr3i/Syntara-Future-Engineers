@@ -14,6 +14,7 @@ def initialize_serial_connection() -> Optional[serial.Serial]:
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) 
         time.sleep(2)
+        ser.reset_input_buffer()
         return ser
         
     except serial.SerialException as e:
@@ -34,16 +35,20 @@ def send_command(command: str) -> bool:
         return False
 
 def read_serial_data() -> Optional[str]:
+    data = None
     global ser
     if ser and ser.is_open:
         try:
-            data = ser.readline().decode('ascii', errors='ignore').strip()
+            if ser.in_waiting > 0:
+                data_bytes = ser.read(ser.in_waiting)
+                data = data_bytes.decode('ascii', errors='ignore').strip()
+                data = data.replace('\x00', '')
             if data:
                 return data
             else:
                 return None
         except Exception as e:
-            print("Error reading serial:", e)
+            print("Error reading serial:", repr(e))
             return None
     else:
         print("No serial connection available")
@@ -61,10 +66,10 @@ def serial_listen_loop(event_publisher, SerialDataReceivedEvent):
             if data is not None:
                 event = SerialDataReceivedEvent(data=data)
                 event_publisher.publish(event)
-            time.sleep(0.01)
+            time.sleep(0.001)
             
     except KeyboardInterrupt:
-        print("\nBucle de escucha serial detenido.")
+        print("\nLoop stopped")
     finally:
         close_serial_connection()
 

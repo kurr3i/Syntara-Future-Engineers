@@ -1,7 +1,7 @@
 from .serial_communication import send_command
 from .events import StartEvent, SerialDataReceivedEvent
 from .event_bus import event_publisher 
-
+in_sis = False 
 def handle_serial_data(event: SerialDataReceivedEvent):
 
     global in_sis
@@ -14,4 +14,4 @@ def handle_serial_data(event: SerialDataReceivedEvent):
             print("hello world")
 
         else:
-            print("System already initialized")
+            print("System already initiated")

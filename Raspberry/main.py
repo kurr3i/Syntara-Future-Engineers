@@ -4,16 +4,16 @@ from dataclasses import dataclass
 import sys 
 import os  
 from Core.event_bus import event_publisher
-from Core.handlers import handle_serial_data  
+import Core.handlers
 from Core.events import SerialDataReceivedEvent
 from Core.serial_communication import serial_listen_loop
 in_sis = False
-
+data = None
 
 
 if __name__ == "__main__":
     
-    event_publisher.subscribe(SerialDataReceivedEvent, handle_serial_data)
+    event_publisher.subscribe(SerialDataReceivedEvent, Core.handlers.handle_serial_data)
     
     print("event bus started")
 
