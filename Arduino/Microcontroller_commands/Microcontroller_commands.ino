@@ -1,131 +1,92 @@
 #include <Servo.h>
-bool w_sequence_done = false;
-
-const int RIGHT_SENSOR = 6;   // sends 'r'
-const int LEFT_SENSOR  = 7;   // sends 'l'
-const int BUTTON_PIN = 7;
-const int IN1 = 3;
-const int IN2 = 2;
-
-const char FSIG = 'q';  // Señal hacia RPi
-
-char motorState = '\0';
-char servoState = '\0';
 
 Servo myServo;
 
-const unsigned long DEBOUNCE_TIME = 150;
+const int IN1 = 3;
+const int IN2 = 2;
+const int BUTTON_PIN = 8;
+
+bool w_sequence_done = false; // desbloquea movimiento
+char currentCommand = 'x';    // 'x' = nada, 'w' = avanzar, 'e','v','u' = comandos especiales
 unsigned long lastPressTime = 0;
-
-long readSensor(int pin) {
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(pin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(pin, LOW);
-
-  pinMode(pin, INPUT);
-  long duration = pulseIn(pin, HIGH, 30000);
-  pinMode(pin, OUTPUT);
-
-  return duration / 58;
-}
+const unsigned long DEBOUNCE_TIME = 150;
 
 void setup() {
-  pinMode(RIGHT_SENSOR, OUTPUT);
-  pinMode(LEFT_SENSOR, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  myServo.attach(4);  // Servo en pin 4 (ajusta si lo necesitas)
+  myServo.attach(4);
 
   Serial.begin(115200);
   delay(100);
 }
 
 void loop() {
-  long rightDist = readSensor(RIGHT_SENSOR);
-  long leftDist  = readSensor(LEFT_SENSOR);
-
-  // Si derecha < 15 cm => mandar 'r'
-  if (rightDist > 0 && rightDist < 15) {
-    Serial.write('r');
-    delay(50);
-  }
-
-  // Si izquierda < 15 cm => mandar 'l'
-  if (leftDist > 0 && leftDist < 15) {
-    Serial.write('l');
-    delay(50);
-  }
-
-
-  // ---- BOTÓN: enviar 'q' ----
+  // ---------- BOTÓN DE INICIO ----------
   bool pressed = !digitalRead(BUTTON_PIN);
   if (pressed && (millis() - lastPressTime) > DEBOUNCE_TIME) {
-    Serial.write(FSIG);
+    Serial.write('q'); // manda 'q' a la Raspberry
     lastPressTime = millis();
-  
+  }
 
-  // ---- LECTURA SERIAL ----
+  // ---------- LECTURA SERIAL ----------
   if (Serial.available()) {
     char incoming = Serial.read();
 
-    // Motor DC
-    if (incoming == 'w' || incoming == 'x') {
-      motorState = incoming;
+    // SOLO desbloquea movimiento con 'w'
+    if (incoming == 'w') {
+      w_sequence_done = true;
+      currentCommand = 'w'; // empieza a avanzar
     }
-
-    // Servo motor
-    if (incoming == 'l' || incoming == 'r' || incoming == 'c') {
-      servoState = incoming;
+    else if (w_sequence_done) {
+      // PRIORIDAD: cualquier comando interrumpe movimiento
+      if (incoming == 'e' || incoming == 'v' || incoming == 'u') {
+        currentCommand = incoming;
+      }
     }
   }
 
-  // ---- CONTROL MOTOR DC ----
-  switch (motorState) {
-case 'w':  
-  if (!w_sequence_done) {
-    // Ejecuta la secuencia SOLO UNA VEZ
+  // ---------- EJECUCIÓN DE COMANDOS ----------
+  switch (currentCommand) {
+    case 'w':
+      // Movimiento hacia adelante
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+      break;
 
+    case 'e':
+      // ------------------------------
+      // AQUI VA TU SECUENCIA PARA "e"
+      // Combinando motor y servo
+      // Por ejemplo:
+      // stopMotor();
+      // myServo.write(...);
+      // digitalWrite(IN1, ...);
+      // digitalWrite(IN2, ...);
+      // Al finalizar:
+      currentCommand = 'w'; // vuelve a avanzar
+      break;
 
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
+    case 'v':
+      // ------------------------------
+      // AQUI VA TU SECUENCIA PARA "v"
+      currentCommand = 'w'; // vuelve a avanzar
+      break;
 
-    // Marcar como ejecutada
-    w_sequence_done = true;
-  }
+    case 'u':
+      // ------------------------------
+      // AQUI VA TU SECUENCIA PARA "u"
+      currentCommand = 'w'; // vuelve a avanzar
+      break;
 
-  // *** MODO ADELANTE CONTINUO ***
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);
-  break;
-
-
-    case 'x':  // Stop
     default:
+      // Stop motor
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
       break;
   }
 
-  // ---- CONTROL SERVO ----
-  switch (servoState) {
-    case 'l':
-      myServo.write(0);   // izquierda
-      break;
-
-    case 'r':
-      myServo.write(180); // derecha
-      break;
-
-    case 'c':
-    default:
-      myServo.write(90);  // centro
-      break;
-  }
+  // ---------- PEQUEÑO RETRASO ----------
+  delay(50); // evita saturar loop
 }
-}
-
