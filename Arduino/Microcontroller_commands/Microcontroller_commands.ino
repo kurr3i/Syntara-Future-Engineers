@@ -1,72 +1,131 @@
-#include <RotaryEncoder.h>
 #include <Servo.h>
+bool w_sequence_done = false;
 
-const int BUTTON_PIN = 7;     
-const int IN2 = 2;
+const int RIGHT_SENSOR = 6;   // sends 'r'
+const int LEFT_SENSOR  = 7;   // sends 'l'
+const int BUTTON_PIN = 7;
 const int IN1 = 3;
+const int IN2 = 2;
 
-const char DCST = 'A';  // Motor forward
-const char DCB  = 'B';  // Motor backward
-const char DCS  = 'C';  // Motor stop
-const char DL   = 'D';  // Dodge left
-const char DR   = 'E';  // Dodge right
-const char CCH  = 'Z';  // Confirm
-const char FSIG = 'q';  // Signal sent when button pressed
+const char FSIG = 'q';  // Señal hacia RPi
 
-Servo D;
+char motorState = '\0';
+char servoState = '\0';
 
-long DU;
-int DICM;
-long RT = 0;
-long LT = 0;
-int posicion_anterior = 0;
-int posicion_actual = 0;
-char command = '\0';
-const unsigned long DEBOUNCE_TIME = 150; // Tiempo de rebote en milisegundos
+Servo myServo;
+
+const unsigned long DEBOUNCE_TIME = 150;
 unsigned long lastPressTime = 0;
-bool lastButtonState = LOW;
 
+long readSensor(int pin) {
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(pin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pin, LOW);
+
+  pinMode(pin, INPUT);
+  long duration = pulseIn(pin, HIGH, 30000);
+  pinMode(pin, OUTPUT);
+
+  return duration / 58;
+}
 
 void setup() {
-  D.attach(4);
+  pinMode(RIGHT_SENSOR, OUTPUT);
+  pinMode(LEFT_SENSOR, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT_PULLUP); // Usa resistencia interna pull-up
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  myServo.attach(4);  // Servo en pin 4 (ajusta si lo necesitas)
+
   Serial.begin(115200);
-  delay(100); // tiempo de estabilización
+  delay(100);
 }
 
 void loop() {
-    bool buttonState = !digitalRead(BUTTON_PIN); 
-  // (botón a GND: presionado = HIGH lógico, por eso el !)
+  long rightDist = readSensor(RIGHT_SENSOR);
+  long leftDist  = readSensor(LEFT_SENSOR);
 
-  // Si el botón se presionó y pasó el tiempo de rebote
-  if (buttonState && (millis() - lastPressTime) > DEBOUNCE_TIME) {
-    Serial.write(FSIG);     // Enviar señal única 'q'
-    lastPressTime = millis();
+  // Si derecha < 15 cm => mandar 'r'
+  if (rightDist > 0 && rightDist < 15) {
+    Serial.write('r');
+    delay(50);
   }
-    lastButtonState = buttonState;
-     }
 
-void serialEvent() {
-  while (Serial.available()) {
-    command = (char)Serial.read();
+  // Si izquierda < 15 cm => mandar 'l'
+  if (leftDist > 0 && leftDist < 15) {
+    Serial.write('l');
+    delay(50);
+  }
 
-    Serial.print("Comando recibido: ");
-    Serial.println(command);
-    
-    switch (command) {
-      case DCST:
 
-        break;
+  // ---- BOTÓN: enviar 'q' ----
+  bool pressed = !digitalRead(BUTTON_PIN);
+  if (pressed && (millis() - lastPressTime) > DEBOUNCE_TIME) {
+    Serial.write(FSIG);
+    lastPressTime = millis();
+  
 
-      case DCB:
+  // ---- LECTURA SERIAL ----
+  if (Serial.available()) {
+    char incoming = Serial.read();
 
-        break;
+    // Motor DC
+    if (incoming == 'w' || incoming == 'x') {
+      motorState = incoming;
+    }
 
-      default:
-        break;
+    // Servo motor
+    if (incoming == 'l' || incoming == 'r' || incoming == 'c') {
+      servoState = incoming;
     }
   }
+
+  // ---- CONTROL MOTOR DC ----
+  switch (motorState) {
+case 'w':  
+  if (!w_sequence_done) {
+    // Ejecuta la secuencia SOLO UNA VEZ
+
+
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+
+    // Marcar como ejecutada
+    w_sequence_done = true;
+  }
+
+  // *** MODO ADELANTE CONTINUO ***
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  break;
+
+
+    case 'x':  // Stop
+    default:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      break;
+  }
+
+  // ---- CONTROL SERVO ----
+  switch (servoState) {
+    case 'l':
+      myServo.write(0);   // izquierda
+      break;
+
+    case 'r':
+      myServo.write(180); // derecha
+      break;
+
+    case 'c':
+    default:
+      myServo.write(90);  // centro
+      break;
+  }
+}
 }
 

@@ -4,7 +4,7 @@ from typing import Optional
 from .event_bus import event_publisher
 from .events import SerialDataReceivedEvent
 
-SERIAL_PORT = '/dev/ttyACM0'    
+SERIAL_PORT = '/dev/ttyACM1'    
 BAUD_RATE = 115200        
 
 ser: Optional[serial.Serial] = None 
