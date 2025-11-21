@@ -1,5 +1,6 @@
 from .serial_communication import send_command
-from .events import StartEvent, SerialDataReceivedEvent
+from .events import SerialDataReceivedEvent, HuskyLensObjectDetectedEvent
+
 from .event_bus import event_publisher 
 in_sis = False 
 
@@ -26,3 +27,18 @@ def handle_serial_data(event: SerialDataReceivedEvent):
     elif data == 'l':
         print("LEFT obstacle event")
         send_command('t')   # respuesta a Arduino
+
+def handle_huskylens_detection(event: HuskyLensObjectDetectedEvent):
+    oid = event.object_id
+
+    payload = f"{oid},{event.x},{event.y},{event.width},{event.height}\n"
+
+    # ID 1 → letra 'A'
+    # ID 2 → letra 'B'
+    if oid == 1:
+        print("[Handler] Detected ID 1 → sending 'A' + coords")
+        send_command("A" + payload)
+    
+    elif oid == 2:
+        print("[Handler] Detected ID 2 → sending 'B' + coords")
+        send_command("B" + payload)
