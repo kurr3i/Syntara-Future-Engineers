@@ -1,12 +1,37 @@
-import serial, time
+import time
+from huskylib import HuskyLensLibrary
 
-hl = serial.Serial("/dev/serial0", 9600, timeout=0.2)
+hl = HuskyLensLibrary("I2C", "", address=0x32)
 
-cmd = bytes([0x55, 0xAA, 0x20, 0x00, 0x00, 0x00, 0x00, 0x20])
+last_detected = None
+
+def on_id_1(obj):
+    print(f">>> EVENTO ID 1: (x={obj.x}, y={obj.y}, w={obj.width}, h={obj.height})")
+
+def on_id_2(obj):
+    print(f">>> EVENTO ID 2: (x={obj.x}, y={obj.y}, w={obj.width}, h={obj.height})")
+
+print("Leyendo HuskyLens continuamente...\n")
 
 while True:
-    hl.write(cmd)
-    time.sleep(0.1)
-    data = hl.read(200)
-    if data:
-        print("RAW:", data.hex())
+    try:
+        objects = hl.requestAll()
+
+        if not objects:
+            last_detected = None
+            continue
+
+        for obj in objects:
+            if obj.ID == 1 and last_detected != 1:
+                last_detected = 1
+                on_id_1(obj)
+
+            elif obj.ID == 2 and last_detected != 2:
+                last_detected = 2
+                on_id_2(obj)
+
+        time.sleep(0.01)
+
+    except Exception as e:
+        print("Error:", e)
+        time.sleep(0.05)
