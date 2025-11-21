@@ -7,6 +7,7 @@ from Core.event_bus import event_publisher
 from Core.serial_communication import serial_listen_loop
 from Core.events import SerialDataReceivedEvent, HuskyLensObjectDetectedEvent
 import Core.handlers
+import Core.huskylens_reader
 in_sis = False
 data = None
 
