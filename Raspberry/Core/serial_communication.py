@@ -3,6 +3,9 @@ import time
 from typing import Optional
 from .event_bus import event_publisher
 from .events import SerialDataReceivedEvent
+import sys
+import huskylens_reader
+import huskylib
 
 SERIAL_PORT = '/dev/ttyACM0'    
 BAUD_RATE = 115200        
